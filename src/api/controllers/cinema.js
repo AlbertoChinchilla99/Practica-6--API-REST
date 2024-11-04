@@ -35,18 +35,29 @@ const postCinemas = async (req, res, next) => {
 const updateCinemas = async (req, res, next) => {
   try {
     const { id } = req.params
-    const newCinema = new Cinema(req.body)
+    const updates = req.body
 
-    newCinema._id = id
-    const cinemaUpdated = await Cinema.findByIdAndUpdate(id, newCinema, {
+    if (updates.movies) {
+      updates.movies = updates.movies
+    } else if (updates.newMovies) {
+      updates.$push = { movies: { $each: updates.newMovies, $slice: -5 } }
+    } else if (updates.movieIdsToRemove) {
+      updates.$pull = { movies: { $in: updates.movieIdsToRemove } }
+    }
+
+    const cinemaUpdated = await Cinema.findByIdAndUpdate(id, updates, {
       new: true
     })
+
+    if (!cinemaUpdated) {
+      return res.status(404).json({ message: 'Cine no encontrado' })
+    }
+
     return res.status(200).json(cinemaUpdated)
   } catch (error) {
-    return res.status(400).json('error')
+    return res.status(400).json({ error: 'Error al actualizar el cine' })
   }
 }
-
 const deleteCinemas = async (req, res, next) => {
   try {
     const { id } = req.params
